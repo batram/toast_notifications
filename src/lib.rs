@@ -25,14 +25,14 @@ pub fn show_deduped_message(notification_id: &String, template: &str, action_cal
             add_open_notification(notification_id);
 
             
-            show_toast_message(template, action_callback);
+            show_toast_message(notification_id, template, action_callback);
         } else {
             //TODO: Build waitlist with dedup..
         }
     }
 }
 
-pub fn show_toast_message(template: &str, action_callback: ActionCallback) {
+pub fn show_toast_message(notification_id: &String, template: &str, action_callback: ActionCallback) {
     let toast_xml = ToastNotificationManager::get_template_content(ToastTemplateType::ToastText02)
         .unwrap()
         .unwrap();
@@ -46,29 +46,36 @@ pub fn show_toast_message(template: &str, action_callback: ActionCallback) {
     // Create the toast and attach event listeners
     let toast = ToastNotification::create_toast_notification(&toast_xml).unwrap();
 
+    //TODO: handle this better
+    let dismissed_id_clone = notification_id.clone();
+
     let dismissed_handler =
         TypedEventHandler::new(move |_sender, args: *mut ToastDismissedEventArgs| {
             unsafe {
                 println!("event dismmissed! {:?} {:?}", args, (*args).get_reason());
             }
-
+            finish_notification(&dismissed_id_clone);
             Ok(())
         });
 
     match toast.add_dismissed(&*dismissed_handler) {
-        Ok(_) => {}
+        Ok(e) => {  println!("attached dismissed_handler: {:?}", e) }
         Err(_) => println!("couldn't attach dismissed_handler"),
     }
+
+    let failed_id_clone = notification_id.clone();
 
     let failed_handler = TypedEventHandler::new(move |_sender, args: *mut ToastFailedEventArgs| {
         unsafe {
             println!("event failed! {:?} {:?}", args, (*args).get_error_code());
         }
+        finish_notification(&failed_id_clone);
+
         Ok(())
     });
 
     match toast.add_failed(&*failed_handler) {
-        Ok(_) => {}
+        Ok(e) => {  println!("attached failed_handler: {:?} {:?}", e, failed_handler.ptr()) }
         Err(_) => println!("couldn't attach failed_handler"),
     }
 
