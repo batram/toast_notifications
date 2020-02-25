@@ -6,7 +6,10 @@ use winrt::windows::ui::notifications::*;
 use winrt::FastHString;
 use state::Storage;
 use std::sync::RwLock;
+
+
 static OPEN_NOTIFICATIONS: Storage<RwLock<Vec<String>>> = Storage::new();
+static DEBUG: bool = false;
 
 type ActionCallback = fn(arguments: &str);
 
@@ -50,32 +53,38 @@ pub fn show_toast_message(notification_id: &String, template: &str, action_callb
     let dismissed_id_clone = notification_id.clone();
 
     let dismissed_handler =
-        TypedEventHandler::new(move |_sender, args: *mut ToastDismissedEventArgs| {
-            unsafe {
-                println!("event dismmissed! {:?} {:?}", args, (*args).get_reason());
+        TypedEventHandler::new(move |sender: *mut ToastNotification, args: *mut ToastDismissedEventArgs| {
+            if DEBUG {
+                unsafe {
+                    println!("event dismmissed! {:?} {:?}", args, (*args).get_reason());
+                    println!("{}", (*sender).get_content().unwrap().unwrap().query_interface::<IXmlNodeSerializer>().unwrap().get_xml().unwrap())
+                }    
             }
             finish_notification(&dismissed_id_clone);
             Ok(())
         });
 
     match toast.add_dismissed(&*dismissed_handler) {
-        Ok(e) => {  println!("attached dismissed_handler: {:?}", e) }
+        Ok(_e) => { }
         Err(_) => println!("couldn't attach dismissed_handler"),
     }
 
     let failed_id_clone = notification_id.clone();
 
-    let failed_handler = TypedEventHandler::new(move |_sender, args: *mut ToastFailedEventArgs| {
-        unsafe {
-            println!("event failed! {:?} {:?}", args, (*args).get_error_code());
+    let failed_handler = TypedEventHandler::new(move |sender, args: *mut ToastFailedEventArgs| {
+        if DEBUG {
+            unsafe {
+                println!("event failed! {:?} {:?} {:?}", args, (*args).get_error_code(), sender);
+            }    
         }
+
         finish_notification(&failed_id_clone);
 
         Ok(())
     });
 
     match toast.add_failed(&*failed_handler) {
-        Ok(e) => {  println!("attached failed_handler: {:?} {:?}", e, failed_handler.ptr()) }
+        Ok(_e) => { }
         Err(_) => println!("couldn't attach failed_handler"),
     }
 
@@ -173,3 +182,9 @@ pub fn have_open_notification(notification_id: &String) -> bool {
         Err(_) => false,
     };
 }
+
+/*
+pub fn shortcutAUMI(aumi: String){
+
+
+}*/
