@@ -26,11 +26,11 @@ pub fn show_deduped_message(notification_id: &String, template: &str, action_cal
     if !have_open_notification(notification_id) {
         if open_notifications_len() < limit {
             add_open_notification(notification_id);
-
             
             show_toast_message(notification_id, template, action_callback);
         } else {
             //TODO: Build waitlist with dedup..
+            println!("TOAST: open limit reached : {}", limit);
         }
     }
 }
@@ -88,6 +88,8 @@ pub fn show_toast_message(notification_id: &String, template: &str, action_callb
         Err(_) => println!("couldn't attach failed_handler"),
     }
 
+    let activated_id_clone = notification_id.clone();
+
     let activated_handler = TypedEventHandler::<_, winrt::IInspectable>::new(
         move |_sender, object: *mut winrt::IInspectable| {
             unsafe {
@@ -103,6 +105,7 @@ pub fn show_toast_message(notification_id: &String, template: &str, action_callb
                     unreachable!("Expected ToastActivatedEventArgs iid got: {}", iid);
                 }
             };
+            finish_notification(&activated_id_clone);
 
             Ok(())
         },
